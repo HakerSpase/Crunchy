@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.vercel/
+model/textures/
+model/renders/
+*.blend
+*.blend1
