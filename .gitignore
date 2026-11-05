@@ -5,3 +5,4 @@ model/textures/
 model/renders/
 *.blend
 *.blend1
+.claude/

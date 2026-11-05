@@ -64,8 +64,14 @@ main { position: relative; z-index: 2; }
   position: sticky;
   top: 0;
   height: 100svh;
-  overflow: clip;
 }
+
+/* Touch screens step through the page without native scrolling: the browser bars
+   never collapse, so the scene and the text use the same, always visible, height. */
+.stepper, .stepper body { overscroll-behavior: none; }
+.stepper { scroll-behavior: auto; }
+.stepper .pin { height: 100dvh; }
+.stepper #stage { height: 100dvh; }
 
 /* ---------- header ---------- */
 .bar {
@@ -276,6 +282,7 @@ h2 { font-size: clamp(33px, 9.2vw, 52px); }
 /* ---------- wide screens: the text takes one side, the pack the other ---------- */
 @media (min-aspect-ratio: 1/1) and (min-width: 760px) {
   :root { --gutter: 5vw; }
+  .pin { overflow: clip; }
   body { font-size: 19px; }
   .mark { font-size: 17px; }
   .bar { padding-top: 26px; }

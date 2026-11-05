@@ -142,6 +142,97 @@ addEventListener('resize', () => { if (!renderer) { measure(); } });
 
 if (renderer) start(renderer);
 
+/* ------------------------------------------------------------------ touch: one swipe, one step */
+if (matchMedia('(pointer: coarse)').matches) initStepper();
+else {
+  // Desktop: the header link lands where all three packs are already on screen.
+  document.addEventListener('click', (e) => {
+    const l = e.target.closest('a[href="#formats"]');
+    if (!l || !secMap.formats) return;
+    e.preventDefault();
+    scrollTo({ top: at('formats', 0.5), behavior: 'smooth' });
+  });
+}
+
+function initStepper() {
+  document.documentElement.classList.add('stepper');
+  // Where each story beat is fully played and its text is on screen.
+  const stations = [
+    ['hero', 0],
+    ['baked', 0.25],
+    ['baked', 0.78],
+    ['fresh', 0.32],
+    ['fresh', 0.8],
+    ['paper', 0.36],
+    ['paper', 0.8],
+    ['plant', 0.13],
+    ['plant', 0.4],
+    ['plant', 0.66],
+    ['plant', 0.96],
+    ['formats', 0.5],
+    ['final', 1],
+  ];
+  const yOf = (i) => Math.round(at(stations[i][0], stations[i][1]));
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+  let cur = 0;
+  let anim = null;
+
+  function goTo(i) {
+    const next = clamp(i, 0, stations.length - 1);
+    if (next === cur && !anim) return;
+    cur = next;
+    const from = scrollY;
+    const to = yOf(next);
+    anim = { from, to, t0: performance.now(), dur: clamp(650 + Math.abs(to - from) * 0.28, 900, 1500) };
+    requestAnimationFrame(tick);
+  }
+  function tick(now) {
+    if (!anim) return;
+    const t = clamp((now - anim.t0) / anim.dur);
+    scrollTo(0, anim.from + (anim.to - anim.from) * ease(t));
+    if (t < 1) requestAnimationFrame(tick);
+    else anim = null;
+  }
+  function step(dir) {
+    // Swipes during the first part of a transition are ignored: they would skip a beat.
+    if (anim && (performance.now() - anim.t0) / anim.dur < 0.6) return;
+    goTo(cur + dir);
+  }
+
+  let startY = 0;
+  let fired = false;
+  addEventListener('touchstart', (e) => {
+    startY = e.touches[0].clientY;
+    fired = false;
+  }, { passive: true });
+  addEventListener('touchmove', (e) => {
+    if (e.touches.length > 1) return; // leave pinch-zoom alone
+    e.preventDefault();
+    const dy = e.touches[0].clientY - startY;
+    if (!fired && Math.abs(dy) > 24) {
+      fired = true;
+      step(dy < 0 ? 1 : -1);
+    }
+  }, { passive: false });
+
+  // Header links jump to their beat.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    e.preventDefault();
+    const id = a.getAttribute('href').slice(1);
+    const i = stations.findIndex((s) => s[0] === id);
+    if (i >= 0) goTo(i);
+  });
+
+  // Rotation changes every height: settle back on the current beat.
+  let timer;
+  addEventListener('resize', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { if (!anim) scrollTo(0, yOf(cur)); }, 250);
+  });
+}
+
 async function start(renderer) {
   renderer.setClearColor(0x000000, 0);
   renderer.toneMapping = THREE.NeutralToneMapping;
